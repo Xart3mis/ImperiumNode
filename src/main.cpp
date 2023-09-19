@@ -8,7 +8,7 @@
 #include <ESPAsyncWebServer.h>
 #include <NeoPixelBusLg.h>
 
-#define MAX_BRIGHTNESS 127
+#define MAX_BRIGHTNESS 255
 #define MIN_BRIGHTNESS 32
 
 #define SELECT_1 14
@@ -18,7 +18,11 @@
 #define STRIP_PIXEL_N 125
 #define RING_PIXEL_N 24
 
-enum output_select { output_ring, output_strip };
+enum output_select
+{
+  output_ring,
+  output_strip
+};
 
 bool connecting_LED_state = false;
 
@@ -53,7 +57,8 @@ void mdns_setup();
 void wifi_setup();
 // void ota_setup();
 
-void setup() {
+void setup()
+{
   GPF(SELECT_1) = GPFFS(GPFFS_GPIO(SELECT_1));
   GPF(SELECT_2) = GPFFS(GPFFS_GPIO(SELECT_2));
 
@@ -117,15 +122,18 @@ void setup() {
   delay(1000);
 
   rest_server_routing();
-  server.onNotFound([](AsyncWebServerRequest *request) { request->send(404); });
+  server.onNotFound([](AsyncWebServerRequest *request)
+                    { request->send(404); });
 
   server.begin();
   Serial.println(F("HTTP server started"));
 }
 
-void loop() {
+void loop()
+{
   unsigned long long currentm = millis();
-  if (currentm - previous_millis_gradient >= 10) {
+  if (currentm - previous_millis_gradient >= 10)
+  {
     noInterrupts();
     toggle_output();
     previous_millis_gradient = currentm;
@@ -137,7 +145,8 @@ void loop() {
     else
       luminance[idx] += (direction[idx] * 1);
 
-    for (size_t i = 0; i < (idx ? STRIP_PIXEL_N : RING_PIXEL_N); i++) {
+    for (size_t i = 0; i < (idx ? STRIP_PIXEL_N : RING_PIXEL_N); i++)
+    {
       if (i % 3 == 0)
         yield();
       strip.SetPixelColor(i, color);
@@ -153,24 +162,32 @@ void loop() {
   // ws.cleanupClients();
 }
 
-void toggle_output() {
-  if (selection == output_strip) {
+void toggle_output()
+{
+  if (selection == output_strip)
+  {
     select_output(output_ring);
     selection = output_ring;
-  } else {
+  }
+  else
+  {
     select_output(output_strip);
     selection = output_strip;
   }
 }
 
-void select_output(output_select _selection) {
+void select_output(output_select _selection)
+{
   noInterrupts();
   uint32_t temp = GPO;
-  if (_selection == output_strip) {
+  if (_selection == output_strip)
+  {
     temp &= ~(1 << SELECT_1);
     temp |= 1 << SELECT_2;
     selection = output_strip;
-  } else {
+  }
+  else
+  {
     temp &= ~(1 << SELECT_2);
     temp |= 1 << SELECT_1;
     selection = output_ring;
@@ -180,18 +197,22 @@ void select_output(output_select _selection) {
 }
 
 void DrawGradient(RgbColor startColor, RgbColor finishColor,
-                  uint16_t startIndex, uint16_t finishIndex) {
+                  uint16_t startIndex, uint16_t finishIndex)
+{
   uint16_t delta = finishIndex - startIndex;
 
-  for (uint16_t index = startIndex; index < finishIndex; index++) {
+  for (uint16_t index = startIndex; index < finishIndex; index++)
+  {
     float progress = static_cast<float>(index - startIndex) / delta;
     RgbColor color = RgbColor::LinearBlend(startColor, finishColor, progress);
     strip.SetPixelColor(index, color);
   }
 }
 
-void mdns_setup() {
-  if (MDNS.begin(WiFi.BSSIDstr() + F("_LUX"))) {
+void mdns_setup()
+{
+  if (MDNS.begin(WiFi.BSSIDstr() + F("_LUX")))
+  {
     Serial.println(F("MDNS started"));
   }
 
@@ -204,8 +225,10 @@ void mdns_setup() {
                 (WiFi.BSSIDstr() + F("_LUX.local")).c_str());
 }
 
-void rest_server_routing() {
-  server.on("/setColor", HTTP_POST, [](AsyncWebServerRequest *request) {
+void rest_server_routing()
+{
+  server.on("/setColor", HTTP_POST, [](AsyncWebServerRequest *request)
+            {
     unsigned long long current_millis_pick = millis();
     if (current_millis_pick - previous_millis_pick < 250) {
       return;
@@ -227,33 +250,38 @@ void rest_server_routing() {
     }
 
     color = RgbColor(red, green, blue);
-    request->send(200);
-  });
+    request->send(200); });
 }
 
-void smart_config() {
+void smart_config()
+{
   select_output(output_ring);
-  if (WiFi.status() != WL_CONNECTED) {
+  if (WiFi.status() != WL_CONNECTED)
+  {
     WiFi.beginSmartConfig();
   }
 
   int rad = M_PI * 2.5;
-  while (WiFi.status() != WL_CONNECTED) {
+  while (WiFi.status() != WL_CONNECTED)
+  {
     yield();
 
     unsigned long long current_millis_begin = millis();
 
-    if (current_millis_begin - previous_millis_begin >= 5'000) {
+    if (current_millis_begin - previous_millis_begin >= 5'000)
+    {
       previous_millis_begin = current_millis_begin;
       WiFi.beginSmartConfig();
     }
 
-    while (1) {
+    while (1)
+    {
       yield();
 
       unsigned long long current_millis_connecting = millis();
 
-      if (current_millis_connecting - previous_millis_connecting >= 250) {
+      if (current_millis_connecting - previous_millis_connecting >= 250)
+      {
         previous_millis_connecting = current_millis_connecting;
 
         connecting_LED_state = !connecting_LED_state;
@@ -263,26 +291,31 @@ void smart_config() {
         strip.Show();
       }
 
-      if (WiFi.smartConfigDone()) {
+      if (WiFi.smartConfigDone())
+      {
         WiFi.begin();
         for (size_t i = 0; i < RING_PIXEL_N; i++)
           strip.SetPixelColor(i, RgbColor(0, 0, 0));
 
-        while (WiFi.status() != WL_CONNECTED) {
+        while (WiFi.status() != WL_CONNECTED)
+        {
           yield();
           unsigned long long current_millis_timeout = millis();
 
-          if (current_millis_timeout - previous_millis_timeout >= 60'000) {
+          if (current_millis_timeout - previous_millis_timeout >= 60'000)
+          {
             previous_millis_timeout = current_millis_timeout;
             break;
           }
 
           unsigned long long current_millis_fadeinout = millis();
 
-          if (current_millis_fadeinout - previous_millis_fadeinout >= 5) {
+          if (current_millis_fadeinout - previous_millis_fadeinout >= 5)
+          {
             previous_millis_fadeinout = current_millis_fadeinout;
             rad += rad_increment;
-            if (rad >= 2.0 * M_PI) {
+            if (rad >= 2.0 * M_PI)
+            {
               rad -= 2.0 * M_PI;
             }
 
@@ -307,7 +340,8 @@ void smart_config() {
   Serial.println(F(""));
 }
 
-void wifi_setup() {
+void wifi_setup()
+{
   select_output(output_ring);
 
   WiFi.setSleepMode(WIFI_NONE_SLEEP);
@@ -317,7 +351,8 @@ void wifi_setup() {
   WiFi.persistent(true);
   WiFi.mode(WIFI_STA);
 
-  if (WiFi.SSID().length() > 0 || WiFi.psk().length() > 0) {
+  if (WiFi.SSID().length() > 0 || WiFi.psk().length() > 0)
+  {
     Serial.printf("Previous SSID: %s\n Previous psk: %s\n", WiFi.SSID().c_str(),
                   WiFi.psk().c_str());
 
@@ -328,13 +363,16 @@ void wifi_setup() {
     float rad = 1.5 * M_PI;
 
     int cnt = 0;
-    while (WiFi.status() != WL_CONNECTED) {
+    while (WiFi.status() != WL_CONNECTED)
+    {
       yield();
 
-      for (int i = 0; i <= 255; i++) {
+      for (int i = 0; i <= 255; i++)
+      {
         yield();
         rad += rad_increment;
-        if (rad >= 2.0 * M_PI) {
+        if (rad >= 2.0 * M_PI)
+        {
           rad -= 2.0 * M_PI;
         }
 
