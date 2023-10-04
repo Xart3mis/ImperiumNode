@@ -1,3 +1,0 @@
-CompileFlags:
-  Add: [-Wall]
-  Remove: [-mlongcalls, -free, -mtext-section-literals, -fipa-pta]
